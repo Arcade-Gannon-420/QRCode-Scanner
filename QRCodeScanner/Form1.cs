@@ -326,9 +326,27 @@ namespace QRCodeScanner
                         string schedule = reader["Schedule"].ToString();
                         string title = reader["Title"].ToString();
 
-                        // Check if the student has already timed in
-                        bool isTimedIn = !string.IsNullOrEmpty(reader["TimeIn"].ToString());
 
+                        //Time In and Out
+                        string timeIn = reader["TimeIn"].ToString();
+                        string timeOut = reader["TimeOut"].ToString();
+
+                        // Parse and format the TimeIn and out value for display
+                        string formattedTimeInDisplay = string.Empty;
+                        if (DateTime.TryParse(timeIn, out DateTime TIMEIN))
+                        {
+                            formattedTimeInDisplay = TIMEIN.ToString("hh:mm tt");
+                        }                      
+
+                        string formattedTimeOutDisplay = string.Empty;
+                        if (DateTime.TryParse(timeOut, out DateTime TIMEOUT))
+                        {
+                            formattedTimeOutDisplay = TIMEOUT.ToString("hh:mm tt");
+                        }
+
+
+                        // Check if the student has already timed in
+                        bool isTimedIn = !string.IsNullOrEmpty(timeIn);
                         //Verify if student already timed in
                         if (isTimedIn)
                         {
@@ -369,15 +387,10 @@ namespace QRCodeScanner
                                 }));
 
                                 //Time In data
-                                DateTime timeIn = DateTime.Parse(reader["TimeIn"].ToString());
-                                string formattedTimeIn = timeIn.ToString("hh:mm tt");
-                                txtTimeIn.Invoke(new Action(() => txtTimeIn.Text = formattedTimeIn));
+                                txtTimeIn.Invoke(new Action(() => txtTimeIn.Text = formattedTimeInDisplay));
 
                                 //Time Out data
-                                DateTime timeOut = DateTime.Parse(reader["TimeOut"].ToString());
-                                string formattedTimeOut = timeOut.ToString("hh:mm tt");
-                                // Display the formatted time in txtTimeIn TextBox
-                                txtTimeOut.Invoke(new Action(() => txtTimeOut.Text = formattedTimeOut));
+                                txtTimeOut.Invoke(new Action(() => txtTimeOut.Text = formattedTimeOutDisplay));
                             }
                             //Timed in but not ready to time out
                             else
@@ -416,9 +429,7 @@ namespace QRCodeScanner
                                 }));
 
                                 //Time In data
-                                DateTime timeIn = DateTime.Parse(reader["TimeIn"].ToString());
-                                string formattedTimeIn = timeIn.ToString("hh:mm tt");
-                                txtTimeIn.Invoke(new Action(() => txtTimeIn.Text = formattedTimeIn));
+                                txtTimeIn.Invoke(new Action(() => txtTimeIn.Text = formattedTimeInDisplay));
 
                                 // Student has not timed in yet
                                 txtTimeOut.Invoke(new Action(() => txtTimeOut.Text = ""));
@@ -426,6 +437,8 @@ namespace QRCodeScanner
                         }
                         else
                         {
+
+                            //Basically time in only kay wala pa naka time out si student
                             // Display common fields
                             txtSubjectCode.Invoke(new Action(() => txtSubjectCode.Text = subjectCode));
                             txtSchedule.Invoke(new Action(() => txtSchedule.Text = schedule));
@@ -459,9 +472,7 @@ namespace QRCodeScanner
                                 }
                             }));
 
-                            DateTime timeIn = DateTime.Parse(reader["TimeIn"].ToString());
-                            string formattedTimeIn = timeIn.ToString("hh:mm tt");
-                            txtTimeIn.Invoke(new Action(() => txtTimeIn.Text = formattedTimeIn));
+                            txtTimeIn.Invoke(new Action(() => txtTimeIn.Text = formattedTimeInDisplay));
 
                             // Student has not timed in yet
                             txtTimeOut.Invoke(new Action(() => txtTimeOut.Text = ""));
@@ -470,11 +481,8 @@ namespace QRCodeScanner
                         // If the student is not enrolled, display "Not Enrolled" status
                         if (enrollmentStatus != "Present" && enrollmentStatus != "Late" && enrollmentStatus != "Absent")
                         {
-                            DateTime timeOut = DateTime.Parse(reader["TimeOut"].ToString());
-                            string formattedTimeOut = timeOut.ToString("hh:mm tt");
-                            // Display the formatted time in txtTimeIn TextBox
-                            txtTimeOut.Invoke(new Action(() => txtTimeOut.Text = formattedTimeOut));
-
+                            
+                            txtTimeOut.Invoke(new Action(() => txtTimeOut.Text = formattedTimeOutDisplay));
                             txtDescriptiveTitle.Invoke(new Action(() => txtDescriptiveTitle.Text = ""));
                             txtSubjectCode.Invoke(new Action(() => txtSubjectCode.Text = ""));
                             txtSchedule.Invoke(new Action(() => txtSchedule.Text = ""));                            
@@ -512,27 +520,15 @@ namespace QRCodeScanner
                     }
                     else
                     {
-                        // Populate the TextBoxes with student information
-                        Photo.Image = null;
-                        txtIDNumber.Invoke(new Action(() => txtIDNumber.Text = ""));
-                        txtFirstName.Invoke(new Action(() => txtFirstName.Text = ""));
-                        txtLastName.Invoke(new Action(() => txtLastName.Text = ""));
-                        txtGender.Invoke(new Action(() => txtGender.Text = ""));
-                        txtCourse.Invoke(new Action(() => txtCourse.Text = ""));
-                        txtYear.Invoke(new Action(() => txtYear.Text = ""));
-                        txtSchoolYear.Invoke(new Action(() => txtSchoolYear.Text = ""));
-                        txtSemester.Invoke(new Action(() => txtSemester.Text = ""));
+                        // If no data is found, leave the textboxes blank
                         txtDescriptiveTitle.Invoke(new Action(() => txtDescriptiveTitle.Text = ""));
                         txtSubjectCode.Invoke(new Action(() => txtSubjectCode.Text = ""));
                         txtSchedule.Invoke(new Action(() => txtSchedule.Text = ""));
-                        txtEnrollmentStatus.Invoke(new Action(() => txtEnrollmentStatus.Text = ""));
+                        txtEnrollmentStatus.Invoke(new Action(() => txtEnrollmentStatus.Text = "No Student Record"));
 
                         //Time
                         txtTimeIn.Invoke(new Action(() => txtTimeIn.Text = ""));
                         txtTimeOut.Invoke(new Action(() => txtTimeOut.Text = ""));
-
-                        txtDescriptiveTitle.Invoke(new Action(() => txtDescriptiveTitle.Text = "No Student Account Found"));
-                        labelNotification.Invoke(new Action(() => labelNotification.Text = ""));
                     }
                 }
             }
@@ -659,6 +655,7 @@ namespace QRCodeScanner
                             //Present, Late, not absent, 
                         }
 
+
                     }
                     else
                     {
@@ -708,6 +705,7 @@ namespace QRCodeScanner
             try
             {
                 // Open the database connection
+                
                 connectionString.Open();
 
                 // Query to fetch student information from StudentsAccounts table
@@ -722,61 +720,56 @@ namespace QRCodeScanner
                             // Create a new Student object and populate it with fetched data
                             student = new Student
                             {
-                                Firstname = (string)reader["Firstname"],
-                                Lastname = (string)reader["Lastname"],
-                                Gender = (string)reader["Gender"],
-                                Course = (string)reader["Course"],
-                                Year = (string)reader["Year"],
-                                SchoolYear = (string)reader["SchoolYear"],
-                                Semester = (string)reader["Semester"],
-                                Photo = reader["Photo"] as byte[]
-                                // You can also fetch the photo here if needed
+                                Firstname = reader["Firstname"] != DBNull.Value ? reader["Firstname"].ToString() : string.Empty,
+                                Lastname = reader["Lastname"] != DBNull.Value ? reader["Lastname"].ToString() : string.Empty,
+                                Gender = reader["Gender"] != DBNull.Value ? reader["Gender"].ToString() : string.Empty,
+                                Course = reader["Course"] != DBNull.Value ? reader["Course"].ToString() : string.Empty,
+                                Year = reader["Year"] != DBNull.Value ? reader["Year"].ToString() : string.Empty,
+                                SchoolYear = reader["SchoolYear"] != DBNull.Value ? reader["SchoolYear"].ToString() : string.Empty,
+                                Semester = reader["Semester"] != DBNull.Value ? reader["Semester"].ToString() : string.Empty,
+                                Photo = reader["Photo"] != DBNull.Value ? (byte[])reader["Photo"] : null
                             };
-                            // Close the reader before executing the next command
-                            reader.Close();
-                            // Query to fetch TimeIn from the Attendance table
-                            string timeInQuery = "SELECT TOP 1 TimeIn FROM Attendance WHERE IDNumber = @IDNumber ORDER BY AttendanceID DESC";
-                            using (SqlCommand timeInCommand = new SqlCommand(timeInQuery, connectionString))
-                            {
-                                timeInCommand.Parameters.AddWithValue("@IDNumber", IDNumber);
-                                object timeInResult = timeInCommand.ExecuteScalar();
-                                if (timeInResult != null && timeInResult != DBNull.Value)
-                                {
-                                    TimeSpan timeIn = (TimeSpan)timeInResult;
-                                    student.TimeIn = timeIn.ToString(); // Assuming TimeIn is of type TimeSpan
-                                }
-                            }
-
-                            // Query to fetch TimeOut from the Attendance table
-                            string timeOutQuery = "SELECT TOP 1 TimeOut FROM Attendance WHERE IDNumber = @IDNumber ORDER BY AttendanceID DESC";
-                            using (SqlCommand timeOutCommand = new SqlCommand(timeOutQuery, connectionString))
-                            {
-                                timeOutCommand.Parameters.AddWithValue("@IDNumber", IDNumber);
-                                object timeOutResult = timeOutCommand.ExecuteScalar();
-                                if (timeOutResult != null && timeOutResult != DBNull.Value)
-                                {
-                                    TimeSpan timeOut = (TimeSpan)timeOutResult;
-                                    student.TimeOut = timeOut.ToString(@"hh\:mm\:ss"); // Format TimeOut as needed
-                                }
-                            }
-
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error fetching student information: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                // Close the database connection
-                connectionString.Close();
-            }
+
+                // Query to fetch TimeIn from the Attendance table
+                string timeInQuery = "SELECT TOP 1 TimeIn FROM Attendance WHERE IDNumber = @IDNumber ORDER BY AttendanceID DESC";
+                using (SqlCommand timeInCommand = new SqlCommand(timeInQuery, connectionString))
+                {
+                    timeInCommand.Parameters.AddWithValue("@IDNumber", IDNumber);
+                    object timeInResult = timeInCommand.ExecuteScalar();
+                    if (timeInResult != null && timeInResult != DBNull.Value)
+                    {
+                        student.TimeIn = timeInResult.ToString();
+                    }
+                }
+
+                // Query to fetch TimeOut from the Attendance table
+                string timeOutQuery = "SELECT TOP 1 TimeOut FROM Attendance WHERE IDNumber = @IDNumber ORDER BY AttendanceID DESC";
+                using (SqlCommand timeOutCommand = new SqlCommand(timeOutQuery, connectionString))
+                {
+                    timeOutCommand.Parameters.AddWithValue("@IDNumber", IDNumber);
+                    object timeOutResult = timeOutCommand.ExecuteScalar();
+                    if (timeOutResult != null && timeOutResult != DBNull.Value)
+                    {
+                        student.TimeOut = timeOutResult.ToString();
+                    }
+                }
+                
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error fetching student information: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            // Close the database connection
+            connectionString.Close();
+        }
 
             return student;
         }
-
 
         private bool IsStudentTimedIn(int IDNumber)
         {
@@ -865,14 +858,14 @@ namespace QRCodeScanner
                 // Open the database connection
                 connectionString.Open();
 
-                // Query to get the TimeIn and EndTime for the subject from attendance and subjectEnrollment tables
-                string query = @"
-            SELECT TOP 1 a.TimeIn, a.TimeOut, se.EndTime , a.Title, a.SubjectCode, a.Schedule, a.enrollmentStatus
-            FROM Attendance a 
-            JOIN subjectEnrollment se ON a.SubjectCode = se.SubjectCode 
-            WHERE a.IDNumber = @IDNumber 
-            AND a.TimeOut IS NULL 
-            ORDER BY a.AttendanceID DESC"; // Ensure we get the latest record
+                    // Query to get the TimeIn and EndTime for the subject from attendance and subjectEnrollment tables
+                    string query = @"
+                SELECT TOP 1 a.TimeIn, a.TimeOut, se.EndTime , a.Title, a.SubjectCode, a.Schedule, a.enrollmentStatus
+                FROM Attendance a 
+                JOIN subjectEnrollment se ON a.SubjectCode = se.SubjectCode 
+                WHERE a.IDNumber = @IDNumber 
+                AND a.TimeOut IS NULL 
+                ORDER BY a.AttendanceID DESC"; // Ensure we get the latest record
 
                 using (SqlCommand command = new SqlCommand(query, connectionString))
                 {
@@ -882,8 +875,30 @@ namespace QRCodeScanner
                     {
                         if (reader.Read())
                         {
-                            DateTime timeIn = DateTime.Parse(reader["TimeIn"].ToString());
+
+                            //Time In and Out
+
+                            string timeIn = reader["TimeIn"].ToString();
+                            string timeOut = reader["TimeOut"].ToString();
+
+                            // Parse and format the TimeIn and out value for display
+                            string formattedTimeInDisplay = string.Empty;
+                            if (DateTime.TryParse(timeIn, out DateTime TIMEIN))
+                            {
+                                formattedTimeInDisplay = TIMEIN.ToString("hh:mm tt");
+                            }
+
+                            string formattedTimeOutDisplay = string.Empty;
+                            if (DateTime.TryParse(timeOut, out DateTime TIMEOUT))
+                            {
+                                formattedTimeOutDisplay = TIMEOUT.ToString("hh:mm tt");
+                            }
+
+
+                            //DateTime timeIn = DateTime.Parse(reader["TimeIn"].ToString());
                             DateTime endTime = DateTime.Parse(reader["EndTime"].ToString());
+
+
                             DateTime currentDateTime = DateTime.Now;
 
                             // Calculate the time 15 minutes before the subject's end time
@@ -934,11 +949,13 @@ namespace QRCodeScanner
                                 }));
 
                                 // Format the DateTime value to display only the time part in "hh:mm tt" format
-                                string formattedTimeIn = timeIn.ToString("hh:mm tt");
+                                //string formattedTimeIn = timeIn.ToString("hh:mm tt");
 
                                 // Display the formatted time in txtTimeIn TextBox
-                                txtTimeIn.Invoke(new Action(() => txtTimeIn.Text = formattedTimeIn));
+                                txtTimeIn.Invoke(new Action(() => txtTimeIn.Text = formattedTimeInDisplay));
                                 txtTimeOut.Invoke(new Action(() => txtTimeOut.Text = ""));
+
+
                                 // Update the notification label text
                                 labelNotification.Invoke(new Action(() => labelNotification.Text = $"Cannot Time out yet. Please wait {remainingMinutes} minutes."));
                                 // Set the label color to red
