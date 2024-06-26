@@ -5,7 +5,7 @@ VisualStudioVersion = 17.9.34723.18
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QRCodeScanner", "QRCodeScanner\QRCodeScanner.csproj", "{D686EE62-2333-4543-97B2-7C4B2BA0869B}"
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Setup1", "Setup1\Setup1.vdproj", "{32A3B49B-2766-435E-A4A2-75C6F58E2AFF}"
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Setup", "Setup\Setup.vdproj", "{91EBE4B6-A63C-468F-97C2-BD981BC28937}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,8 +17,8 @@ Global
 		{D686EE62-2333-4543-97B2-7C4B2BA0869B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D686EE62-2333-4543-97B2-7C4B2BA0869B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D686EE62-2333-4543-97B2-7C4B2BA0869B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{32A3B49B-2766-435E-A4A2-75C6F58E2AFF}.Debug|Any CPU.ActiveCfg = Debug
-		{32A3B49B-2766-435E-A4A2-75C6F58E2AFF}.Release|Any CPU.ActiveCfg = Release
+		{91EBE4B6-A63C-468F-97C2-BD981BC28937}.Debug|Any CPU.ActiveCfg = Debug
+		{91EBE4B6-A63C-468F-97C2-BD981BC28937}.Release|Any CPU.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

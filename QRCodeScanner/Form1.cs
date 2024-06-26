@@ -13,11 +13,15 @@ using System.Linq;
 using static QRCodeScanner.students.Student;
 using Guna.UI2.WinForms;
 
+
 namespace QRCodeScanner
 {
     public partial class Form1 : Form
     {
-        SqlConnection connectionString = new SqlConnection(@"Data Source=DESKTOP-SLBI6LR\MSSQLSERVER2024;Initial Catalog=FinalDb;Integrated Security=True");
+        SqlConnection connectionString = new SqlConnection(@"Data Source=.\MSSQLSERVER2024;Initial Catalog=FinalDb;Integrated Security=True");
+
+
+
 
 
 
@@ -47,6 +51,11 @@ namespace QRCodeScanner
         public Form1()
         {
             InitializeComponent();
+
+            panel3.MouseDown += panel3_MouseDown;
+            panel3.MouseMove += panel3_MouseMove;
+            panel3.MouseUp += panel3_MouseUp;
+
             barcodeReader = new BarcodeReader();
             captureDevice = new FilterInfoCollection(FilterCategory.VideoInputDevice);
             StartCamera();
@@ -90,6 +99,42 @@ namespace QRCodeScanner
 
             layoutPanel4 = new Rectangle(tableLayoutPanel1.Location, tableLayoutPanel1.Size);
 
+
+
+
+
+            //---------------------------------------------------------------------------
+
+
+
+
+            //---------------------------------------------------------------------------
+
+        }
+
+
+        private bool dragging = false;
+        private Point dragCursorPoint;
+        private Point dragFormPoint;
+        private void panel3_MouseDown(object sender, MouseEventArgs e)
+        {
+            dragging = true;
+            dragCursorPoint = Cursor.Position;
+            dragFormPoint = this.Location;
+        }
+
+        private void panel3_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (dragging)
+            {
+                Point difference = Point.Subtract(Cursor.Position, new Size(dragCursorPoint));
+                this.Location = Point.Add(dragFormPoint, new Size(difference));
+            }
+        }
+
+        private void panel3_MouseUp(object sender, MouseEventArgs e)
+        {
+            dragging = false;
         }
 
         private void Form1_Resize(object sender, EventArgs e)
@@ -110,6 +155,8 @@ namespace QRCodeScanner
             resize_Control(panel1, panel1Box);
             resize_Control(panel5, layoutPanel1);
             resize_Control(tableLayoutPanel2, layoutPanel2);
+
+
             resize_Control(tableLayoutPanel3, layoutPanel3);
 
 
@@ -188,7 +235,7 @@ namespace QRCodeScanner
         private void FinalFrame_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
             // Resize the captured frame to a smaller size
-            Bitmap capturedFrame = ResizeImage((Bitmap)eventArgs.Frame.Clone(), new Size(399, 294));
+            Bitmap capturedFrame = ResizeImage((Bitmap)eventArgs.Frame.Clone(), new Size(239, 185));
 
             // Decode QR code
             string qrText = DecodeQRCode(capturedFrame);
@@ -221,7 +268,10 @@ namespace QRCodeScanner
                     command.Parameters.AddWithValue("@IDNumber", IDNumber);
                     command.Parameters.AddWithValue("@Firstname", Firstname);
                     command.Parameters.AddWithValue("@Lastname", Lastname);
-                    command.Parameters.AddWithValue("@TimeIn", DateTime.Now.TimeOfDay);
+
+                    // Convert current time to 12-hour format string
+                    string timeInFormatted = DateTime.Now.ToString("hh:mm:ss tt");
+                    command.Parameters.AddWithValue("@TimeIn", timeInFormatted);
 
                     // Add output parameter for message
                     SqlParameter messageParam = new SqlParameter("@Message", SqlDbType.NVarChar, 100);
@@ -276,20 +326,47 @@ namespace QRCodeScanner
                         string schedule = reader["Schedule"].ToString();
                         string title = reader["Title"].ToString();
 
-
                         // Check if the student has already timed in
                         bool isTimedIn = !string.IsNullOrEmpty(reader["TimeIn"].ToString());
 
+                        //Verify if student already timed in
                         if (isTimedIn)
                         {
-                            // Student already timed in
+                            // Student already timed in and need to time out
                             if (reader["TimeOut"] != DBNull.Value)
                             {
                                 // Display common fields
                                 txtSubjectCode.Invoke(new Action(() => txtSubjectCode.Text = subjectCode));
                                 txtSchedule.Invoke(new Action(() => txtSchedule.Text = schedule));
                                 txtDescriptiveTitle.Invoke(new Action(() => txtDescriptiveTitle.Text = title));
-                                txtEnrollmentStatus.Invoke(new Action(() => txtEnrollmentStatus.Text = enrollmentStatus));
+                                txtEnrollmentStatus.Invoke(new Action(() =>
+                                {
+                                    txtEnrollmentStatus.Text = enrollmentStatus;
+                                    if (enrollmentStatus == "Present")
+                                    {
+                                        txtEnrollmentStatus.FillColor = Color.Green;
+                                        txtEnrollmentStatus.ForeColor = Color.White;
+                                        txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                    }
+                                    else if (enrollmentStatus == "Late")
+                                    {
+                                        txtEnrollmentStatus.FillColor = Color.Orange;
+                                        txtEnrollmentStatus.ForeColor = Color.White;
+                                        txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                    }
+                                    else if (enrollmentStatus == "Not Enrolled")
+                                    {
+                                        txtEnrollmentStatus.FillColor = Color.Red;
+                                        txtEnrollmentStatus.ForeColor = Color.White;
+                                        txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                    }
+                                    else
+                                    {
+                                        txtEnrollmentStatus.FillColor = Color.White;
+                                        txtEnrollmentStatus.ForeColor = Color.Black;
+                                        txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                    }
+                                }));
 
                                 //Time In data
                                 DateTime timeIn = DateTime.Parse(reader["TimeIn"].ToString());
@@ -302,13 +379,41 @@ namespace QRCodeScanner
                                 // Display the formatted time in txtTimeIn TextBox
                                 txtTimeOut.Invoke(new Action(() => txtTimeOut.Text = formattedTimeOut));
                             }
+                            //Timed in but not ready to time out
                             else
                             {
                                 // Display common fields
                                 txtSubjectCode.Invoke(new Action(() => txtSubjectCode.Text = subjectCode));
                                 txtSchedule.Invoke(new Action(() => txtSchedule.Text = schedule));
                                 txtDescriptiveTitle.Invoke(new Action(() => txtDescriptiveTitle.Text = title));
-                                txtEnrollmentStatus.Invoke(new Action(() => txtEnrollmentStatus.Text = enrollmentStatus));
+                                txtEnrollmentStatus.Invoke(new Action(() =>
+                                {
+                                    txtEnrollmentStatus.Text = enrollmentStatus;
+                                    if (enrollmentStatus == "Present")
+                                    {
+                                        txtEnrollmentStatus.FillColor = Color.Green;
+                                        txtEnrollmentStatus.ForeColor = Color.White;
+                                        txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                    }
+                                    else if (enrollmentStatus == "Late")
+                                    {
+                                        txtEnrollmentStatus.FillColor = Color.Orange;
+                                        txtEnrollmentStatus.ForeColor = Color.White;
+                                        txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                    }
+                                    else if (enrollmentStatus == "Not Enrolled")
+                                    {
+                                        txtEnrollmentStatus.FillColor = Color.Red;
+                                        txtEnrollmentStatus.ForeColor = Color.White;
+                                        txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                    }
+                                    else
+                                    {
+                                        txtEnrollmentStatus.FillColor = Color.White;
+                                        txtEnrollmentStatus.ForeColor = Color.Black;
+                                        txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                    }
+                                }));
 
                                 //Time In data
                                 DateTime timeIn = DateTime.Parse(reader["TimeIn"].ToString());
@@ -325,7 +430,34 @@ namespace QRCodeScanner
                             txtSubjectCode.Invoke(new Action(() => txtSubjectCode.Text = subjectCode));
                             txtSchedule.Invoke(new Action(() => txtSchedule.Text = schedule));
                             txtDescriptiveTitle.Invoke(new Action(() => txtDescriptiveTitle.Text = title));
-                            txtEnrollmentStatus.Invoke(new Action(() => txtEnrollmentStatus.Text = enrollmentStatus));
+                            txtEnrollmentStatus.Invoke(new Action(() =>
+                            {
+                                txtEnrollmentStatus.Text = enrollmentStatus;
+                                if (enrollmentStatus == "Present")
+                                {
+                                    txtEnrollmentStatus.FillColor = Color.Green;
+                                    txtEnrollmentStatus.ForeColor = Color.White;
+                                    txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                }
+                                else if (enrollmentStatus == "Late")
+                                {
+                                    txtEnrollmentStatus.FillColor = Color.Orange;
+                                    txtEnrollmentStatus.ForeColor = Color.White;
+                                    txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                }
+                                else if (enrollmentStatus == "Not Enrolled")
+                                {
+                                    txtEnrollmentStatus.FillColor = Color.Red;
+                                    txtEnrollmentStatus.ForeColor = Color.White;
+                                    txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                }
+                                else
+                                {
+                                    txtEnrollmentStatus.FillColor = Color.White;
+                                    txtEnrollmentStatus.ForeColor = Color.Black;
+                                    txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                }
+                            }));
 
                             DateTime timeIn = DateTime.Parse(reader["TimeIn"].ToString());
                             string formattedTimeIn = timeIn.ToString("hh:mm tt");
@@ -345,18 +477,62 @@ namespace QRCodeScanner
 
                             txtDescriptiveTitle.Invoke(new Action(() => txtDescriptiveTitle.Text = ""));
                             txtSubjectCode.Invoke(new Action(() => txtSubjectCode.Text = ""));
-                            txtSchedule.Invoke(new Action(() => txtSchedule.Text = ""));
-                            txtEnrollmentStatus.Invoke(new Action(() => txtEnrollmentStatus.Text = enrollmentStatus + " at this time"));
+                            txtSchedule.Invoke(new Action(() => txtSchedule.Text = ""));                            
+
+                            txtEnrollmentStatus.Invoke(new Action(() =>
+                            {
+                                txtEnrollmentStatus.Text = enrollmentStatus;
+                                if (enrollmentStatus == "Present")
+                                {
+                                    txtEnrollmentStatus.FillColor = Color.Green;
+                                    txtEnrollmentStatus.ForeColor = Color.White;
+                                    txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                }
+                                else if (enrollmentStatus == "Late")
+                                {
+                                    txtEnrollmentStatus.FillColor = Color.Orange;
+                                    txtEnrollmentStatus.ForeColor = Color.White;
+                                    txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                }
+                                else if (enrollmentStatus == "Not Enrolled")
+                                {
+                                    txtEnrollmentStatus.Text = enrollmentStatus + " at this time";
+                                    txtEnrollmentStatus.FillColor = Color.Red;
+                                    txtEnrollmentStatus.ForeColor = Color.White;
+                                    txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                }
+                                else
+                                {
+                                    txtEnrollmentStatus.FillColor = Color.White;
+                                    txtEnrollmentStatus.ForeColor = Color.Black;
+                                    txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                }
+                            }));
                         }
                     }
                     else
                     {
-                        // If no data is found, leave the textboxes blank
+                        // Populate the TextBoxes with student information
+                        Photo.Image = null;
+                        txtIDNumber.Invoke(new Action(() => txtIDNumber.Text = ""));
+                        txtFirstName.Invoke(new Action(() => txtFirstName.Text = ""));
+                        txtLastName.Invoke(new Action(() => txtLastName.Text = ""));
+                        txtGender.Invoke(new Action(() => txtGender.Text = ""));
+                        txtCourse.Invoke(new Action(() => txtCourse.Text = ""));
+                        txtYear.Invoke(new Action(() => txtYear.Text = ""));
+                        txtSchoolYear.Invoke(new Action(() => txtSchoolYear.Text = ""));
+                        txtSemester.Invoke(new Action(() => txtSemester.Text = ""));
                         txtDescriptiveTitle.Invoke(new Action(() => txtDescriptiveTitle.Text = ""));
                         txtSubjectCode.Invoke(new Action(() => txtSubjectCode.Text = ""));
                         txtSchedule.Invoke(new Action(() => txtSchedule.Text = ""));
                         txtEnrollmentStatus.Invoke(new Action(() => txtEnrollmentStatus.Text = ""));
-                        txtTimeOut.Invoke(new Action(() => txtTimeOut.Text = "No Record"));
+
+                        //Time
+                        txtTimeIn.Invoke(new Action(() => txtTimeIn.Text = ""));
+                        txtTimeOut.Invoke(new Action(() => txtTimeOut.Text = ""));
+
+                        txtDescriptiveTitle.Invoke(new Action(() => txtDescriptiveTitle.Text = "No Student Account Found"));
+                        labelNotification.Invoke(new Action(() => labelNotification.Text = ""));
                     }
                 }
             }
@@ -381,7 +557,12 @@ namespace QRCodeScanner
                         using (SqlCommand updateCommand = new SqlCommand("UPDATE Attendance SET TimeOut = @TimeOut WHERE IDNumber = @IDNumber AND TimeOut IS NULL AND enrollmentStatus != 'Absent'", connectionString))
                         {
                             updateCommand.Parameters.AddWithValue("@IDNumber", IDNumber);
-                            updateCommand.Parameters.AddWithValue("@TimeOut", DateTime.Now.TimeOfDay);
+
+
+                            // Convert current time to 12-hour format string
+                            // Convert current time to 12-hour format string
+                            string timeOutFormatted = DateTime.Now.ToString("hh:mm:ss tt");
+                            updateCommand.Parameters.AddWithValue("@TimeOut", timeOutFormatted);
                             updateCommand.ExecuteNonQuery();
                         }
                         DisplayAttendanceData(IDNumber);
@@ -686,7 +867,7 @@ namespace QRCodeScanner
 
                 // Query to get the TimeIn and EndTime for the subject from attendance and subjectEnrollment tables
                 string query = @"
-            SELECT TOP 1 a.TimeIn, se.EndTime , a.Title, a.SubjectCode, a.Schedule, a.enrollmentStatus
+            SELECT TOP 1 a.TimeIn, a.TimeOut, se.EndTime , a.Title, a.SubjectCode, a.Schedule, a.enrollmentStatus
             FROM Attendance a 
             JOIN subjectEnrollment se ON a.SubjectCode = se.SubjectCode 
             WHERE a.IDNumber = @IDNumber 
@@ -721,14 +902,43 @@ namespace QRCodeScanner
                                 txtSubjectCode.Invoke(new Action(() => txtSubjectCode.Text = reader["SubjectCode"].ToString()));
                                 txtSchedule.Invoke(new Action(() => txtSchedule.Text = reader["Schedule"].ToString()));
                                 txtDescriptiveTitle.Invoke(new Action(() => txtDescriptiveTitle.Text = reader["Title"].ToString()));
-                                txtEnrollmentStatus.Invoke(new Action(() => txtEnrollmentStatus.Text = reader["enrollmentStatus"].ToString()));
+
+                                string enrollmentStatus = reader["enrollmentStatus"].ToString();
+                                txtEnrollmentStatus.Invoke(new Action(() =>
+                                {
+                                    txtEnrollmentStatus.Text = enrollmentStatus;
+                                    if (enrollmentStatus == "Present")
+                                    {
+                                        txtEnrollmentStatus.FillColor = Color.Green;
+                                        txtEnrollmentStatus.ForeColor = Color.White;
+                                        txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                    }
+                                    else if (enrollmentStatus == "Late")
+                                    {
+                                        txtEnrollmentStatus.FillColor = Color.Orange;
+                                        txtEnrollmentStatus.ForeColor = Color.White;
+                                        txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                    }
+                                    else if (enrollmentStatus == "Not Enrolled")
+                                    {
+                                        txtEnrollmentStatus.FillColor = Color.Red;
+                                        txtEnrollmentStatus.ForeColor = Color.White;
+                                        txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                    }
+                                    else
+                                    {
+                                        txtEnrollmentStatus.FillColor = Color.White;
+                                        txtEnrollmentStatus.ForeColor = Color.Black;
+                                        txtEnrollmentStatus.Font = new Font(txtEnrollmentStatus.Font, FontStyle.Bold);
+                                    }
+                                }));
 
                                 // Format the DateTime value to display only the time part in "hh:mm tt" format
                                 string formattedTimeIn = timeIn.ToString("hh:mm tt");
 
                                 // Display the formatted time in txtTimeIn TextBox
                                 txtTimeIn.Invoke(new Action(() => txtTimeIn.Text = formattedTimeIn));
-
+                                txtTimeOut.Invoke(new Action(() => txtTimeOut.Text = ""));
                                 // Update the notification label text
                                 labelNotification.Invoke(new Action(() => labelNotification.Text = $"Cannot Time out yet. Please wait {remainingMinutes} minutes."));
                                 // Set the label color to red
@@ -782,19 +992,6 @@ namespace QRCodeScanner
             this.Close();
         }
 
-        private void btnMaximizeBox_Click(object sender, EventArgs e)
-        {
-        }
-
-        private void btnMinimizeBox_Click(object sender, EventArgs e)
-        {
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-
-        }
-
-        
+       
     }
 }
